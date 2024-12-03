@@ -1,26 +1,29 @@
-from fastapi import APIRouter,Query, HTTPException
-import json 
-import re
+import os
+from fastapi import APIRouter, Query
+from elasticsearch import Elasticsearch
 
-router=APIRouter(tags=['Search CVEs'])
-
-JSON_FILE_PATH = "C:\\Users\\user\\TASK_4\\TASK_4\\src\\data\\known_exploited_vulnerabilities.json"
+router = APIRouter(tags=['Search CVEs'])
 
 @router.get("/search")
-def search(query: str = Query(..., description="Keyword to search for")):
-    try:
-        with open(JSON_FILE_PATH, "r") as file:
-            data = json.load(file)
+def search_vulnerabilities(query: str = Query(..., description="Search keyword for CVE entries")):
+    index_name = 'cve'
+    es_url = os.environ.get("ES_URL")
+    es_token = os.environ.get("ES_TOKEN")
+
+    if not (es_token and es_url):
+        print('Elasticsearch URL and/or Token not provided!')
+
+    client = Elasticsearch(es_url, api_key = es_token)
+
+    response = client.search(index=index_name, body={
+        "query": {
+            "query_string": {
+                "query": query,
+                "fields": ["*"]
+                }
+            },
+        "size": 1223     
+        } 
+    )
         
-        vulnerabilities = data.get("vulnerabilities", [])
-
-        filtered_cve = [
-            cve for cve in vulnerabilities
-            if re.search(rf'\b{re.escape(query)}\b', json.dumps(cve), re.IGNORECASE)
-        ]
-
-        return filtered_cve
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="JSON file not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return [doc['_source'] for doc in response.get('hits', {}).get('hits', [])]

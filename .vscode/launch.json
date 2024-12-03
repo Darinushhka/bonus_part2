@@ -4,21 +4,35 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
-{
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "ES_URL": "https://02d05a1d844543bca4cebc39e75fa4f6.us-central1.gcp.cloud.es.io:443",
+                "ES_TOKEN": "ekoyWmlKTUJwcF9FeFdkUXNXT2Q6anNieWxPMmxUOXVtT3RTbnBpbm41dw==",
+            }
+        },
+        {
             "name": "Python: FastAPI",
             "type": "python",
             "request": "launch",
             "module": "uvicorn",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": [
+            "args":  [
                 "main:app",
                 "--host",
-                "0.0.0.0",
+                "127.0.0.1",
                 "--port",
-                "6980"
-            ]
+                "8000"
+                ],
+            "env": {
+                "ES_URL": "https://02d05a1d844543bca4cebc39e75fa4f6.us-central1.gcp.cloud.es.io:443",
+                "ES_TOKEN": "ekoyWmlKTUJwcF9FeFdkUXNXT2Q6anNieWxPMmxUOXVtT3RTbnBpbm41dw==",
+            }
         }
     ]
 }

@@ -1,28 +1,37 @@
-from fastapi import APIRouter, HTTPException, Query
+import os
+from fastapi import APIRouter
+from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
-import json
 
 router = APIRouter(tags=['Last N Days CVEs'])
 
-JSON_FILE_PATH = "C:\\Users\\user\\TASK_4\\TASK_4\\src\\data\\known_exploited_vulnerabilities.json"
-
 @router.get("/get/all")
-def get_recent_cve(timespan: int = Query(10, description="Number of days to look back (default: 10 days)")):
-    try:
-        with open(JSON_FILE_PATH, "r") as file:
-            data = json.load(file)
-        
-        vulnerabilities = data.get("vulnerabilities", [])
-        start_date = datetime.now() - timedelta(days=timespan)
+def get_vulnerabilities_from_last_month(limit: int = 40, days: int = 10):
+    index_name = 'cve'
+    es_url = os.environ.get("ES_URL")
+    es_token = os.environ.get("ES_TOKEN")
 
-        recent_cve = [
-            cve for cve in vulnerabilities
-            if datetime.strptime(cve["dateAdded"], "%Y-%m-%d") >= start_date
-        ]
+    if not (es_token and es_url):
+        print('Elasticsearch URL and/or Token not provided')
 
+    client = Elasticsearch(es_url, api_key=es_token)
 
-        return recent_cve[:40]
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="JSON file not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    today = datetime.now()
+    last_month_date = (today - timedelta(days=days)).strftime('%Y-%m-%d')
+
+    response = client.search(index=index_name, body={
+            "size": limit,  
+            "query": {
+                "range": {
+                    "dateAdded": {
+                        "gte": last_month_date,  
+                        "lte": today.strftime('%Y-%m-%d'),
+                        "format": "yyyy-MM-dd"
+                    }
+                }
+            },
+            "sort": [{"dateAdded": {"order": "desc"}}]
+        })
+
+    return [doc['_source'] for doc in response.get('hits', {}).get('hits', [])]
+
